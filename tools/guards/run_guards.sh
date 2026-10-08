@@ -8,12 +8,12 @@ python3 "$guards_dir/line_ratchet.py" --check || status=1
 python3 "$guards_dir/world_runtime_architecture_check.py" --check || status=1
 python3 "$guards_dir/dynamic_call_scan.py" --check || status=1
 python3 "$guards_dir/zero_reference_scan.py" --check || status=1
-python3 "$guards_dir/required_tests_check.py" || status=1
+python3 "$guards_dir/checkout_path_check.py" || status=1
 python3 "$guards_dir/preload_resource_check.py" || status=1
 python3 "$guards_dir/cross_platform_text_check.py" || status=1
 python3 "$guards_dir/foreground_shader_check.py" || status=1
 python3 "$guards_dir/test_persistence_change_check.py" || status=1
-if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+if [ -n "${GITHUB_BASE_REF:-}" ]; then
 	python3 "$guards_dir/persistence_change_check.py" \
 		--base-ref "origin/${GITHUB_BASE_REF}" || status=1
 elif git -C "$guards_dir/../.." rev-parse --verify origin/main >/dev/null 2>&1; then

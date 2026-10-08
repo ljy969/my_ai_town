@@ -116,11 +116,9 @@ def validate_declaration(
     elif decision == "no_migration" and migration_ids:
         errors.append(f"{label} no_migration 决策不能登记 migrationIds。")
 
-    references = {
-        "samples": ("game/tests/fixtures/",),
-        "tests": ("game/tests/", "tools/"),
-        "docs": ("docs/",),
-    }
+    # The game test suite and historical fixtures were retired. Keep the
+    # compatibility declaration and documentation checks for production changes.
+    references = {"docs": ("docs/",)}
     for field, prefixes in references.items():
         items = value.get(field)
         if not _non_empty_strings(items):
@@ -129,12 +127,8 @@ def validate_declaration(
         for item in items:
             if not item.startswith(prefixes) or not (repo_root / item).is_file():
                 errors.append(f"{label} {field} 引用无效：{item}")
-        if field in {"tests", "docs"} and not any(item in changed for item in items):
+        if not any(item in changed for item in items):
             errors.append(f"{label} {field} 至少有一个引用文件必须在本次修改中更新。")
-    if decision == "migration" and not any(
-        item in changed for item in value.get("samples", [])
-    ):
-        errors.append(f"{label} migration 决策必须在本次修改中更新历史样本。")
     return errors
 
 

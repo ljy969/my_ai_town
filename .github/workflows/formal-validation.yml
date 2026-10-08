@@ -19,7 +19,7 @@ env:
 
 jobs:
   guards:
-    name: 防复发守卫（棘轮/动态调用/零引用/套件防缩水）
+    name: 静态与打包守卫
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -29,73 +29,8 @@ jobs:
       - name: 运行守卫
         run: tools/guards/run_guards.sh
 
-  formal-suite:
-    name: formal-suite
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-godot
-        with:
-          godot-version: ${{ env.GODOT_VERSION }}
-
-      - name: Formal release story suite
-        env:
-          AI_TOWN_FORMAL_RELEASE_START_AT: ${{ github.event_name == 'pull_request' && '10' || '1' }}
-        run: zsh game/tests/run_formal_release_story_suite.sh
-
-      - name: Source tree must stay clean after tests
-        run: test -z "$(git status --porcelain)"
-
-  formal-ui:
-    name: PR UI regression
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-godot
-        with:
-          godot-version: ${{ env.GODOT_VERSION }}
-      - name: UI-facing formal stories
-        env:
-          AI_TOWN_FORMAL_RELEASE_START_AT: "3"
-          AI_TOWN_FORMAL_RELEASE_END_AT: "8"
-          AI_TOWN_FORMAL_RELEASE_SKIP_INDICES: "4"
-        run: zsh game/tests/run_formal_release_story_suite.sh
-      - run: test -z "$(git status --porcelain)"
-
-  agent-suite:
-    name: Agent offline (${{ matrix.name }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: provider
-            groups: provider
-          - name: memory
-            groups: memory,avatar_memory
-          - name: runtime
-            groups: runtime,save
-          - name: contracts
-            groups: contract,debug,prompt,support
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-godot
-        with:
-          godot-version: ${{ env.GODOT_VERSION }}
-      - env:
-          AI_TOWN_PROVIDER_TEST_NO_NETWORK: "1"
-        run: >-
-          godot --headless --path game
-          --script res://tests/agent/run_agent_tests.gd
-          -- --group=${{ matrix.groups }}
-      - run: test -z "$(git status --porcelain)"
-
-  formal-entry:
-    name: Isolated formal entry story
+  game-import:
+    name: Godot project import
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -103,76 +38,17 @@ jobs:
       - uses: ./.github/actions/setup-godot
         with:
           godot-version: ${{ env.GODOT_VERSION }}
-      - env:
-          GODOT_USERDATA_ROOT: /home/runner/.local/share/godot/app_userdata
-        run: zsh game/tests/run_isolated_formal_entry_story.sh
-      - run: test -z "$(git status --porcelain)"
-
-  historical-migration:
-    name: Historical save migration matrix
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-godot
-        with:
-          godot-version: ${{ env.GODOT_VERSION }}
-      - env:
-          GODOT_USERDATA_ROOT: /home/runner/.local/share/godot/app_userdata
-          AI_TOWN_HISTORICAL_MATRIX_PARALLEL: "2"
-        run: zsh game/tests/run_historical_save_migration_matrix.sh
-
-      - name: Source tree must stay clean after tests
+      - name: Source tree must stay clean after import
         run: test -z "$(git status --porcelain)"
 
-  windows-save-recovery:
-    name: Windows save recovery (long path)
+  windows-checkout:
+    name: Windows checkout with default path limits
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Enable Windows long paths
+      - name: Use default Windows path limits
         shell: pwsh
-        run: git config --global core.longpaths true
+        run: git config --global core.longpaths false
       - uses: actions/checkout@v4
-      - name: Download Godot
-        shell: pwsh
-        run: |
-          $archive = Join-Path $env:RUNNER_TEMP "godot.zip"
-          $target = Join-Path $env:RUNNER_TEMP "godot"
-          Invoke-WebRequest `
-            -Uri "https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}-stable/Godot_v${{ env.GODOT_VERSION }}-stable_win64.exe.zip" `
-            -OutFile $archive
-          Expand-Archive -Path $archive -DestinationPath $target
-          $console = Get-ChildItem $target -Filter "*console.exe" | Select-Object -First 1
-          if (-not $console) { throw "Godot console executable not found" }
-          "GODOT_CONSOLE=$($console.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Import project
-        shell: pwsh
-        run: '& $env:GODOT_CONSOLE --headless --path game --import'
-      - name: Interrupted transaction, offline rebind, and long-path regression
-        shell: pwsh
-        run: |
-          & $env:GODOT_CONSOLE --headless --path game --script res://tests/windows_directory_cleanup_test.gd
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $env:GODOT_CONSOLE --headless --path game --script res://tests/save_reconciliation_test.gd
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upgrade beta5 long-path fixture
-        shell: pwsh
-        run: |
-          $userRoot = Join-Path $env:APPDATA "Godot\app_userdata\我的ai小镇"
-          $fixture = "game/tests/fixtures/historical_saves/beta5-long-path"
-          if (Test-Path $userRoot) { Remove-Item -Recurse -Force $userRoot }
-          New-Item -ItemType Directory -Force -Path $userRoot | Out-Null
-          Copy-Item -Recurse -Force "$fixture\*" $userRoot
-          $suffix = "x" * 90
-          $env:AI_TOWN_HISTORICAL_FIXTURE_ID = "beta5"
-          $env:AI_TOWN_HISTORICAL_SLOT_ID = "roundtrip-slot-long-path-$suffix"
-          $env:AI_TOWN_HISTORICAL_SESSION_ID = "roundtrip-session-long-path-$suffix"
-          $env:AI_TOWN_PROVIDER_TEST_NO_NETWORK = "1"
-          try {
-            & $env:GODOT_CONSOLE --headless --path game --script res://tests/historical_save_migration_story_test.gd
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          finally {
-            if (Test-Path $userRoot) { Remove-Item -Recurse -Force $userRoot }
-          }
+      - name: Verify checkout paths
+        run: python tools/guards/checkout_path_check.py

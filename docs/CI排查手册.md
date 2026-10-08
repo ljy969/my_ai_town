@@ -13,9 +13,9 @@
 
 当前 CI 主要有两组日常检查，另有一条手动发行流程：
 
-1. 防复发检查：检查文件行数、动态调用、零引用候选和正式测试清单。
-2. 正式测试：导入 Godot 项目，运行 Agent 离线测试、正式故事测试和独立正式入口测试，最后确认测试没有修改源码目录。
-3. 草稿发行：只允许从最新 `main` 手动运行；完整复用前两组检查后，正式导出 Windows、macOS 与 Android，验证下载包内容，最后建立尚未公开的 GitHub Draft Release。
+1. 防复发检查：检查文件行数、动态调用、零引用候选、检出路径和发行契约。
+2. 项目检查：导入 Godot 项目，确认导入未修改源码目录；Windows 使用 `core.longpaths=false` 检出并核对路径长度。
+3. 草稿发行：只允许从最新 `main` 手动运行；复用静态与项目导入检查后，正式导出 Windows、macOS 与 Android，验证下载包内容，最后建立尚未公开的 GitHub Draft Release。
 
 最近一次失败并不是 GitHub 环境不稳定，而是同一批提交中同时存在两个问题：
 
@@ -85,28 +85,21 @@ rg -n '^ERROR:|SCRIPT ERROR:|Parse Error:|Failed to load script' /tmp/my-ai-town
 
 第二条命令没有输出才算通过。只看到导入进度完成，不代表脚本没有报错。
 
-### 4. 运行与 CI 相同的正式测试
+### 4. 测试退役后的验证范围
 
-```sh
-AI_TOWN_PROVIDER_TEST_NO_NETWORK=1 \
-  "$GODOT_BIN" --headless --path game --script res://tests/agent/run_agent_tests.gd
-zsh game/tests/run_formal_release_story_suite.sh
-zsh game/tests/run_isolated_formal_entry_story.sh
-```
+2026-10-08 起，项目停止维护后移除了 `game/tests` 和历史测试样本，以解决 Windows
+默认检出的超长路径失败。原 Agent、故事、历史迁移与 Windows 存档回归套件不再运行；
+本文后续已发生案例中的旧测试命令仅作为历史记录。游戏启动、运行资源、存档读写与迁移、
+导出配置保留；涉及功能变动时仍需人工验证。
 
-发行前还可以运行：
-
-```sh
-zsh game/tests/run_complete_formal_release_validation.sh
-```
-
-### 5. 确认测试没有生成遗漏文件
+### 5. 确认导入没有生成遗漏文件
 
 ```sh
 git status --porcelain
 ```
 
-测试后如果出现新的 `.gd.uid`、报告文件或其他源码目录改动，CI 最后一步会失败。应确认这些文件应该提交、忽略还是改到临时目录，不能直接带着未处理状态推送。
+导入后如果出现新的 `.gd.uid`、报告文件或其他源码目录改动，CI 最后一步会失败。
+应确认这些文件应该提交、忽略还是改到临时目录。
 
 ### 6. 发行前确认版本与玩家文件
 

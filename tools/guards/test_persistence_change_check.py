@@ -15,8 +15,6 @@ class PersistenceChangeCheckTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         for relative in (
-            "game/tests/fixtures/historical_saves/catalog.json",
-            "game/tests/persistence_story_test.gd",
             "docs/存档迁移手册.md",
         ):
             path = self.root / relative
@@ -41,13 +39,11 @@ class PersistenceChangeCheckTest(unittest.TestCase):
         changed = {
             "game/world/runtime/persistence/Codec.gd",
             declaration,
-            "game/tests/fixtures/historical_saves/catalog.json",
-            "game/tests/persistence_story_test.gd",
             "docs/存档迁移手册.md",
         }
         self.assertEqual(check_changes(self.root, changed), [])
 
-    def test_migration_requires_changed_sample(self) -> None:
+    def test_migration_requires_changed_documentation(self) -> None:
         declaration = "docs/persistence-changes/example.json"
         path = self.root / declaration
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -57,11 +53,9 @@ class PersistenceChangeCheckTest(unittest.TestCase):
             {
                 "game/world/runtime/persistence/Codec.gd",
                 declaration,
-                "game/tests/persistence_story_test.gd",
-                "docs/存档迁移手册.md",
             },
         )
-        self.assertTrue(any("更新历史样本" in error for error in errors))
+        self.assertTrue(any("docs 至少有一个引用文件必须" in error for error in errors))
 
     def test_unrelated_change_needs_no_declaration(self) -> None:
         self.assertEqual(check_changes(self.root, {"README.md"}), [])
@@ -74,8 +68,6 @@ class PersistenceChangeCheckTest(unittest.TestCase):
             "summary": "升级存档字段。",
             "affectedModules": ["world_snapshot"],
             "migrationIds": ["example-migration"],
-            "samples": ["game/tests/fixtures/historical_saves/catalog.json"],
-            "tests": ["game/tests/persistence_story_test.gd"],
             "docs": ["docs/存档迁移手册.md"],
         }
 

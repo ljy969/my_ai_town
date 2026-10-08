@@ -14,6 +14,11 @@
    "file": "game/agent/debug/DebugBatch.gd"
   },
   {
+   "id": "class:AgentDebugScenarios",
+   "file": "game/agent/debug/AgentDebugScenarios.gd",
+   "note": "game/tests 退役后仅有的静态引用消失；保留现有文件，避免扩大为生产代码清理。"
+  },
+  {
    "id": "class:AgentDecisionExecution",
    "file": "game/agent/DecisionExecution.gd"
   },
@@ -92,6 +97,21 @@
   {
    "id": "class:AgentResidentStateCodec",
    "file": "game/agent/lifecycle/ResidentStateCodec.gd"
+  },
+  {
+   "id": "class:TownIndoorPropAuthoring",
+   "file": "game/world/data/town/TownIndoorPropAuthoring.gd",
+   "note": "game/tests 退役后仅有的静态引用消失；保留现有文件，避免扩大为生产代码清理。"
+  },
+  {
+   "id": "class:TownWorldActivityCatalog",
+   "file": "game/world/data/town/TownWorldActivityCatalog.gd",
+   "note": "game/tests 退役后仅有的静态引用消失；保留现有文件，避免扩大为生产代码清理。"
+  },
+  {
+   "id": "tscn:game/ui/resident_action_menu/ResidentActionMenu.tscn",
+   "file": "game/ui/resident_action_menu/ResidentActionMenu.tscn",
+   "note": "game/tests 退役后仅有的静态引用消失；保留现有文件，避免扩大为生产代码清理。"
   }
  ]
 }
